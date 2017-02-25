@@ -2,10 +2,12 @@
 #define __COMMON_H__
 
 
-#include <fstream>
 #include <cstdio>
 #include <cstdlib>
+#include <fstream>
+#include <list>
 #include <string>
+#include <numeric>
 #include <unordered_map>
 #include <vector>
 
@@ -39,7 +41,8 @@ struct FastaRecord {
 
 // Struct to contain a merged set of OTUs
 struct MergeOtu {
-
+    FastaRecord *fasta;
+    double abundance;
 };
 
 

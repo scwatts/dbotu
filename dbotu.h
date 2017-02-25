@@ -3,8 +3,18 @@
 
 
 #include "common.h"
+#include "levenshtein.h"
 
 
-bool merge_otu(long long unsigned int otu_index, OtuTable &otu_table, std::unordered_map<std::string,FastaRecord> &fasta_records);
+struct OtuData {
+    OtuTable *table;
+    std::unordered_map<std::string,FastaRecord> *fasta;
+    arma::Col<long long unsigned int> *otu_indices_abundance;
+    std::vector<MergeOtu> *merged_otus;
+};
+
+
+bool merge_otu(long long unsigned int &otu_index, double &otu_min_abundance, OtuData &otu_data);
+
 
 #endif

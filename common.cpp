@@ -110,6 +110,7 @@ std::unordered_map<std::string,FastaRecord> read_fasta_from_file(std::string &fa
 
     // Begin parsing
     while (true) {
+        // TODO: potential error here when FASTA files do not end with a newline
         // Make sure FASTA description starts with > character
         if (line[0] != '>') {
             fprintf(stderr, "Records in Fasta files should start with '>' character\n");
