@@ -30,40 +30,46 @@ int main(int argc, char **argv) {
 
     // Iterate from the most abundant OTU to the least and assign OTUs
     for (auto &otu_index : otu_indices_abundance) {
-        // TODO: check that it really makes sense to be accummulating total OTU counts here
-
-
         // Determine minimum abundance to merge current OTU
-        double otu_abundance = static_cast<double>(otu_data.otu_indices_abundance->at(otu_index));
+        double otu_abundance = static_cast<double>(otu_data.table->otu_sum_totals.at(otu_index));
         double otu_min_abundance = otu_abundance * dbotu_options.min_abundance;
 
         // If not OTU merged (function call with boolean retval), then create new OTU group
-        if (!merge_otu(otu_index, otu_min_abundance, otu_data)) {
+        if (!merge_otu(otu_index, otu_min_abundance, dbotu_options.min_distance, dbotu_options.max_pvalue, otu_data)) {
             // Create new OTU
             // TODO: refactor to reduce code re-use
             std::string *otu_name = &otu_data.table->otu_names[otu_index];
-            otu_data.merged_otus->push_back(MergeOtu { &otu_data.fasta->at(*otu_name), otu_abundance });
+            MergeOtu merged_otu = MergeOtu { otu_index, std::vector<long long unsigned int> {otu_index},
+                                             &otu_data.fasta->at(*otu_name), otu_data.table->otu_counts.col(otu_index),
+                                             otu_abundance };
+            otu_data.merged_otus->push_back(merged_otu);
         }
 
     }
+
+
+    // Write out results
+    write_otu_table_to_file(merged_otus, otu_data, dbotu_options.output_otu_counts_fp);
+    write_merged_otu_members_to_file(merged_otus, otu_data, dbotu_options.output_membership_fp);
+
 
     return 0;
 }
 
 
-bool merge_otu(long long unsigned int &otu_index, double &otu_min_abundance, OtuData &otu_data) {
+bool merge_otu(long long unsigned int &otu_index, double &otu_min_abundance, double &min_distance, double &max_pvalue, OtuData &otu_data) {
     // Get a pointer to OTU name, FASTA, and counts
     std::string *otu_name = &otu_data.table->otu_names[otu_index];
     FastaRecord *otu_fasta = &otu_data.fasta->at(*otu_name);
 
     // Running list of candidate OTUs to merge into
     // TODO: Use a list of pointers rather than copies of the MergeOtu struct
-    std::list<MergeOtu> merged_otu_candidates;
+    std::vector<MergeOtu*> merged_otu_candidates;
 
     // Discover all OTUs which pass the abundance test
     for (auto &merged_otu : *otu_data.merged_otus) {
         if (merged_otu.abundance > otu_min_abundance) {
-            merged_otu_candidates.push_back(merged_otu);
+            merged_otu_candidates.push_back(&merged_otu);
         }
     }
 
@@ -74,34 +80,69 @@ bool merge_otu(long long unsigned int &otu_index, double &otu_min_abundance, Otu
 
     // Order candidate merge OTUs by increasing genetic distance
     std::vector<double> merged_otu_candidate_distances;
-    for (auto &merged_otu_candidate : merged_otu_candidates) {
+    for (auto merged_otu_candidate : merged_otu_candidates) {
         // Calculate levenshtein distance
-        size_t lev_distance = lev_edit_distance(merged_otu_candidate.fasta->sequence.length(),
-                                                merged_otu_candidate.fasta->sequence.c_str(),
+        size_t lev_distance = lev_edit_distance(merged_otu_candidate->fasta->sequence.length(),
+                                                merged_otu_candidate->fasta->sequence.c_str(),
                                                 otu_fasta->sequence.length(),
                                                 otu_fasta->sequence.c_str(), 0);
 
         // Length-adjusted Levenshtein distance
-        size_t sequence_length_sum = merged_otu_candidate.fasta->sequence.length() + otu_fasta->sequence.length();
+        size_t sequence_length_sum = merged_otu_candidate->fasta->sequence.length() + otu_fasta->sequence.length();
         double distance = static_cast<double>(lev_distance) / (0.5 * static_cast<double>(sequence_length_sum));
 
         // Add distance to vector
         merged_otu_candidate_distances.push_back(distance);
     }
 
-    // Get ordered indicies
-    std::vector<unsigned int> distance_indices(merged_otu_candidate_distances.size());
-    std::iota(distance_indices.begin(), distance_indices.end(), 0);
-    std::sort(distance_indices.begin(), distance_indices.end(), [&merged_otu_candidate_distances](size_t i1, size_t i2) { return merged_otu_candidate_distances[i1] < merged_otu_candidate_distances[i2];});
+    // Get the indices of merged OTUs in order of increasing genetic distance
+    std::vector<unsigned int> merged_otu_indices(merged_otu_candidate_distances.size());
+    std::iota(merged_otu_indices.begin(), merged_otu_indices.end(), 0);
+    std::sort(merged_otu_indices.begin(), merged_otu_indices.end(), [&merged_otu_candidate_distances](size_t i1, size_t i2) { return merged_otu_candidate_distances[i1] < merged_otu_candidate_distances[i2];});
 
 
-    // Statistical significance test
+    // Statistical significance test; iterate through distances from smallest to largest distance
+    for (auto &merged_otu_index : merged_otu_indices) {
+        // Test distance; if we fail this then all following will fail, exit early
+        double *distance = &merged_otu_candidate_distances[merged_otu_index];
+        if (*distance > min_distance) {
+            break;
+        }
 
-    // Merge if all passed
+        // Significance test; if pass return true
+        // TODO: use pointer here
+        MergeOtu *merged_otu = merged_otu_candidates[merged_otu_index];
+        arma::Col<double> merged_otu_counts = merged_otu->otu_counts;
+        arma::Col<double> otu_counts = otu_data.table->otu_counts.col(otu_index);
 
-    printf("%llu\n", otu_index);
-    printf("%s\n", otu_fasta->description.c_str());
-    printf("%s\n", otu_fasta->sequence.c_str());
+        // Determine degress of freedom for chi^2 distribution and likelyhood ratio
+        unsigned int df = static_cast<unsigned int>(otu_counts.n_elem) - 1;
+        double lr = -2.0 * (d_helper(otu_counts + merged_otu_counts) - d_helper(otu_counts) - d_helper(merged_otu_counts));
 
-    return true;
+        // Calculate p-value
+        double p_value = 1 - gsl_cdf_chisq_P(lr, df);
+
+        // If p value passes threshold hold, merge and then return true, else test next genetically
+        // closest OTU
+        if (p_value > max_pvalue) {
+            // Merge; add counts, abundance, and name to successful candidate
+            // TODO: do this in a nicer way (accessed in calling function)
+            merged_otu->otu_counts += otu_counts;
+            merged_otu->abundance += static_cast<double>(otu_data.otu_indices_abundance->at(otu_index));
+            merged_otu->member_count_indices.push_back(otu_index);
+
+            // Return true
+            return true;
+        }
+    }
+
+    // If we reach this point then return false
+    return false;
+}
+
+
+inline double d_helper(arma::Col<double> counts) {
+    // Get non-zero counts and calculate
+    arma::Col<double> nz_counts = counts.elem(arma::find(counts > 0.0));
+    return arma::sum(nz_counts % arma::log(nz_counts)) - (arma::sum(nz_counts) * std::log(arma::sum(nz_counts)));
 }

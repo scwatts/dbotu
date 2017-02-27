@@ -6,15 +6,12 @@
 #include "levenshtein.h"
 
 
-struct OtuData {
-    OtuTable *table;
-    std::unordered_map<std::string,FastaRecord> *fasta;
-    arma::Col<long long unsigned int> *otu_indices_abundance;
-    std::vector<MergeOtu> *merged_otus;
-};
+// Core algorithm for merging OTUs
+bool merge_otu(long long unsigned int &otu_index, double &otu_min_abundance, double &min_distance, double &max_pvalue, OtuData &otu_data);
 
 
-bool merge_otu(long long unsigned int &otu_index, double &otu_min_abundance, OtuData &otu_data);
+// Function used in calculation of the p value
+inline double d_helper(arma::Col<double> counts);
 
 
 #endif

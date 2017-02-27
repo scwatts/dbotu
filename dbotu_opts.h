@@ -12,7 +12,7 @@ struct DbotuOptions {
     // Set some default parameters
     double min_distance = 0.1f;
     double min_abundance = 10.0f;
-    double min_pvalue = 0.0005f;
+    double max_pvalue = 0.0005f;
 
     // Declare some important variables
     std::string input_otu_counts_fp;

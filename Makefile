@@ -6,7 +6,7 @@ CXXFLAGS=-std=c++11 -Wall -Wextra -Wpedantic -Wshadow -Wnon-virtual-dtor \
 	 -g -O3
 
 # Libraries and includes
-# LDLIBS=
+LDLIBS=-lblas -llapack -larmadillo -lgsl
 # LDFLAGS=
 # INC=
 

@@ -25,7 +25,7 @@ void print_help() {
     fprintf(stderr, "  -a <float>, --abundance <float>\n");
     fprintf(stderr, "                Minimum fold abundance for merging (default: 10.0)\n");
     fprintf(stderr, "  -p <float>, --pvalue <float>\n");
-    fprintf(stderr, "                Minimum p value for merging (default: 0.0005)\n");
+    fprintf(stderr, "                Maximum p value for merging (default: 0.0005)\n");
     fprintf(stderr, "\n");
     fprintf(stderr, "Other:\n");
     fprintf(stderr, "  -h        --help\n");
@@ -97,7 +97,7 @@ DbotuOptions get_commandline_arguments(int argc, char **argv) {
                 dbotu_options.min_abundance = double_from_optarg(optarg);
                 break;
             case 'p':
-                dbotu_options.min_pvalue = double_from_optarg(optarg);
+                dbotu_options.max_pvalue = double_from_optarg(optarg);
                 break;
             case 'v':
                 print_version();
@@ -175,7 +175,7 @@ DbotuOptions get_commandline_arguments(int argc, char **argv) {
     }
 
     // Ensure p value threshold is between [0.0, 1.0]
-    if (dbotu_options.min_pvalue < 0.0f || dbotu_options.min_pvalue > 1.0f) {
+    if (dbotu_options.max_pvalue < 0.0f || dbotu_options.max_pvalue > 1.0f) {
         print_help();
         fprintf(stderr,"\n%s: error: -p/--pvalue must be between 0.0 and 1.0\n", argv[0]);
         exit(1);

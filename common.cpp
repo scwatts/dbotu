@@ -142,3 +142,54 @@ std::unordered_map<std::string,FastaRecord> read_fasta_from_file(std::string &fa
         }
     }
 }
+
+
+// Write the merged OTU counts to file
+void write_otu_table_to_file(std::vector<MergeOtu> &merged_otus, OtuData &otu_data, std::string &output_fp) {
+    // Get a file handle
+    FILE *output_fh = fopen(output_fp.c_str(), "w");
+
+    // Write out header
+    fprintf(output_fh, "#OTU ID");
+    for (auto &sample_name : otu_data.table->sample_names) {
+        fprintf(output_fh, "\t%s", sample_name.c_str());
+    }
+
+    // Terminate line with newline character
+    fprintf(output_fh, "\n");
+
+
+    // Iterate rows and counts to write out
+    for (auto &merged_otu : merged_otus) {
+        // Write sequence as row name
+        fprintf(output_fh, "%s", otu_data.table->otu_names[merged_otu.count_index].c_str());
+
+        // Write row counts
+        for (auto &count : merged_otu.otu_counts) {
+            fprintf(output_fh, "\t%f", count);
+        }
+
+        // Terminate line with newline character
+        fprintf(output_fh, "\n");
+    }
+}
+
+
+void write_merged_otu_members_to_file(std::vector<MergeOtu> &merged_otus, OtuData &otu_data, std::string &output_fp) {
+    // Get a file handle
+    FILE *output_fh = fopen(output_fp.c_str(), "w");
+
+    // Iterate over merged OTUs and write out members
+    for (auto &merged_otu : merged_otus) {
+        // Write seed OTU
+        fprintf(output_fh, "%s", otu_data.table->otu_names[merged_otu.count_index].c_str());
+
+        // Write members merged into this OTU; skipping the first member as we've processed that one above
+        for (std::vector<long long unsigned int>::iterator it = merged_otu.member_count_indices.begin() + 1; it != merged_otu.member_count_indices.end(); ++it) {
+            fprintf(output_fh, "\t%s", otu_data.table->otu_names[*it].c_str());
+        }
+
+        // Terminate line with newline character
+        fprintf(output_fh, "\n");
+    }
+}

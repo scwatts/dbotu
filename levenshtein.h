@@ -1,3 +1,7 @@
+#ifndef __LEVENSHTEIN_H__
+#define __LEVENSHTEIN_H__
+
+
 /*
  * Levenshtein.c
  * @(#) $Id: Levenshtein.c,v 1.41 2005/01/13 20:05:36 yeti Exp $
@@ -262,3 +266,6 @@ lev_edit_distance(size_t len1, const char *string1,
   free(row);
   return i;
 }
+
+
+#endif
