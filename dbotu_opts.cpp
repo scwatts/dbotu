@@ -77,7 +77,7 @@ DbotuOptions get_commandline_arguments(int argc, char **argv) {
         }
 
         // Process current arguments
-        switch(c) {
+        switch (c) {
             case 't':
                 dbotu_options.input_otu_counts_fp = optarg;
                 break;

@@ -9,7 +9,17 @@ int main(int argc, char **argv) {
 
     // Load OTU count table from file and sum OTU counts
     OtuTable otu_table = read_otu_table_from_file(dbotu_options.input_otu_counts_fp);
-    otu_table.otu_sum_totals = arma::sum(otu_table.otu_counts, 0);
+    otu_table.otu_sum_totals.reserve(otu_table.otu_counts.size());
+    for (auto &row_counts : otu_table.otu_counts) {
+        // Sum row
+        double otu_sum = 0;
+        for (auto &count : row_counts) {
+            otu_sum += count;
+        }
+
+        // Add row sum to otu_sum_totals vector
+        otu_table.otu_sum_totals.push_back(otu_sum);
+    }
 
 
     // Load FASTA records
@@ -20,7 +30,7 @@ int main(int argc, char **argv) {
 
 
     // Collect indexes in order of most abundant OTU
-    arma::Col<long long unsigned int> otu_indices_abundance = arma::sort_index(otu_table.otu_sum_totals, "descend");
+    std::vector<long long unsigned int> otu_indices_abundance = sort_indices(otu_table.otu_sum_totals, "decreasing");
 
 
     // Place a pointer to related data into a struct
@@ -40,7 +50,7 @@ int main(int argc, char **argv) {
             // TODO: refactor to reduce code re-use
             std::string *otu_name = &otu_data.table->otu_names[otu_index];
             MergeOtu merged_otu = MergeOtu { otu_index, std::vector<long long unsigned int> {otu_index},
-                                             &otu_data.fasta->at(*otu_name), otu_data.table->otu_counts.col(otu_index),
+                                             &otu_data.fasta->at(*otu_name), otu_data.table->otu_counts.at(otu_index),
                                              otu_abundance };
             otu_data.merged_otus->push_back(merged_otu);
         }
@@ -96,9 +106,7 @@ bool merge_otu(long long unsigned int &otu_index, double &otu_min_abundance, dou
     }
 
     // Get the indices of merged OTUs in order of increasing genetic distance
-    std::vector<unsigned int> merged_otu_indices(merged_otu_candidate_distances.size());
-    std::iota(merged_otu_indices.begin(), merged_otu_indices.end(), 0);
-    std::sort(merged_otu_indices.begin(), merged_otu_indices.end(), [&merged_otu_candidate_distances](size_t i1, size_t i2) { return merged_otu_candidate_distances[i1] < merged_otu_candidate_distances[i2];});
+    std::vector<long long unsigned int> merged_otu_indices = sort_indices(merged_otu_candidate_distances, "increasing");
 
 
     // Statistical significance test; iterate through distances from smallest to largest distance
@@ -112,12 +120,13 @@ bool merge_otu(long long unsigned int &otu_index, double &otu_min_abundance, dou
         // Significance test; if pass return true
         // TODO: use pointer here
         MergeOtu *merged_otu = merged_otu_candidates[merged_otu_index];
-        arma::Col<double> merged_otu_counts = merged_otu->otu_counts;
-        arma::Col<double> otu_counts = otu_data.table->otu_counts.col(otu_index);
+        std::vector<double> *merged_otu_counts = &merged_otu->otu_counts;
+        std::vector<double> *otu_counts = &otu_data.table->otu_counts.at(otu_index);
 
         // Determine degress of freedom for chi^2 distribution and likelyhood ratio
-        unsigned int df = static_cast<unsigned int>(otu_counts.n_elem) - 1;
-        double lr = -2.0 * (d_helper(otu_counts + merged_otu_counts) - d_helper(otu_counts) - d_helper(merged_otu_counts));
+        unsigned int df = static_cast<unsigned int>(otu_counts->size()) - 1;
+        std::vector<double> count_vector_sum = element_wise_sum(*otu_counts, *merged_otu_counts);
+        double lr = -2.0 * (d_helper(count_vector_sum) - d_helper(*otu_counts) - d_helper(*merged_otu_counts));
 
         // Calculate p-value
         double p_value = 1 - gsl_cdf_chisq_P(lr, df);
@@ -127,7 +136,8 @@ bool merge_otu(long long unsigned int &otu_index, double &otu_min_abundance, dou
         if (p_value > max_pvalue) {
             // Merge; add counts, abundance, and name to successful candidate
             // TODO: do this in a nicer way (accessed in calling function)
-            merged_otu->otu_counts += otu_counts;
+            // TODO: are we wasting cycles doing an assignment here (can we sum inplace?)
+            merged_otu->otu_counts = element_wise_sum(merged_otu->otu_counts, *otu_counts);
             merged_otu->abundance += static_cast<double>(otu_data.otu_indices_abundance->at(otu_index));
             merged_otu->member_count_indices.push_back(otu_index);
 
@@ -141,8 +151,39 @@ bool merge_otu(long long unsigned int &otu_index, double &otu_min_abundance, dou
 }
 
 
-inline double d_helper(arma::Col<double> counts) {
-    // Get non-zero counts and calculate
-    arma::Col<double> nz_counts = counts.elem(arma::find(counts > 0.0));
-    return arma::sum(nz_counts % arma::log(nz_counts)) - (arma::sum(nz_counts) * std::log(arma::sum(nz_counts)));
+inline std::vector<double> element_wise_sum(std::vector<double> &vec_a, std::vector<double> &vec_b) {
+    // Ensure incoming vectors are of the same length
+    assert(vec_a.size() == vec_b.size());
+
+    // Return variable
+    std::vector<double> out_vec;
+    out_vec.reserve(vec_a.size());
+
+    // Sum
+    for (unsigned int i = 0; i < vec_a.size(); ++i) {
+        out_vec.push_back(vec_a[i] + vec_b[i]);
+    }
+
+    // Return
+    return out_vec;
+}
+
+inline double d_helper(std::vector<double> &counts) {
+    // Total sum of non-zero counts and total sum of log(nz_count) * nz_count)
+    double total = 0;
+    double log_product_total = 0;
+
+    // Get values
+    for (auto &count : counts) {
+        if (count > 0.0) {
+            // Log and multiply
+            log_product_total += (std::log(count) * count);
+
+            // Add count to total
+            total += count;
+        }
+    }
+
+    // Calculate and return
+    return log_product_total - (total * std::log(total));
 }

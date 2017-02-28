@@ -27,7 +27,7 @@ OtuTable read_otu_table_from_file(std::string &otu_count_fp) {
     std::string line;
     std::string ele;
     std::stringstream line_stream;
-    std::vector<double> counts_vector;
+    std::vector<std::vector<double>> otu_counts;
     bool id;
 
     // Open file stream
@@ -55,6 +55,10 @@ OtuTable read_otu_table_from_file(std::string &otu_count_fp) {
         // (Re)sets variables for loop
         id = true;
         line_stream.clear();
+        std::vector<double> line_counts;
+
+        // Reverse space for line counts
+        line_counts.reserve(otu_table.sample_number);
 
         // Add current line to line stream and then split by tabs
         line_stream.str(line);
@@ -67,15 +71,17 @@ OtuTable read_otu_table_from_file(std::string &otu_count_fp) {
             }
 
             // Add current element to OTU count after converting to double; some OTUs may be corrected and therefore a double
-            counts_vector.push_back(std::stod(ele));
+            line_counts.push_back(std::stod(ele));
         }
 
+        // Add line_counts to otu_counts nested vector and then increment OTU number
+        otu_counts.push_back(line_counts);
         ++otu_table.otu_number;
     }
 
     // Finally construct the OTU observation matrix directly from the vector memory
     // TODO: check if operator= assigning via copy or is it being optimised out
-    otu_table.otu_counts = arma::Mat<double>(&counts_vector[0], otu_table.sample_number, otu_table.otu_number, false, true);
+    otu_table.otu_counts = std::move(otu_counts);
 
     return otu_table;
 }
@@ -143,6 +149,21 @@ std::unordered_map<std::string,FastaRecord> read_fasta_from_file(std::string &fa
     }
 }
 
+// Sort a vector and return a vector of ordered indices
+std::vector<long long unsigned int> sort_indices(std::vector<double> &in_vec, std::string direction) {
+    // Initialise output vector and fill with 0..n where n is input_vector.size() - 1
+    std::vector<long long unsigned int> out_vec(in_vec.size());
+    std::iota(out_vec.begin(), out_vec.end(), 0);
+
+    // Sort indices based on input vector and return
+    if (direction == "increasing") {
+        std::sort(out_vec.begin(), out_vec.end(), [&in_vec](size_t i1, size_t i2) { return in_vec[i1] < in_vec[i2]; });
+    } else if (direction == "decreasing") {
+        std::sort(out_vec.begin(), out_vec.end(), [&in_vec](size_t i1, size_t i2) { return in_vec[i1] > in_vec[i2]; });
+    }
+
+    return out_vec;
+}
 
 // Write the merged OTU counts to file
 void write_otu_table_to_file(std::vector<MergeOtu> &merged_otus, OtuData &otu_data, std::string &output_fp) {

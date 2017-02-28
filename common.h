@@ -2,19 +2,17 @@
 #define __COMMON_H__
 
 
-#include <cstdio>
-#include <cstdlib>
+#include <algorithm>
+#include <cassert>
 #include <cmath>
 #include <fstream>
-#include <list>
 #include <random>
+#include <sstream>
 #include <string>
-#include <numeric>
 #include <unordered_map>
 #include <vector>
 
 
-#include <armadillo>
 #include <gsl/gsl_cdf.h>
 
 
@@ -29,10 +27,10 @@ struct OtuTable {
     unsigned int otu_number = 0;
 
     // OTU counts
-    arma::Mat<double> otu_counts;
+    std::vector<std::vector<double>> otu_counts;
 
     // OTU total read counts
-    arma::Row<double> otu_sum_totals;
+    std::vector<double> otu_sum_totals;
 };
 
 
@@ -47,7 +45,7 @@ struct MergeOtu {
     long long unsigned int count_index;
     std::vector<long long unsigned int> member_count_indices;
     FastaRecord *fasta;
-    arma::Col<double> otu_counts;
+    std::vector<double> otu_counts;
     double abundance;
 };
 
@@ -56,7 +54,7 @@ struct MergeOtu {
 struct OtuData {
     OtuTable *table;
     std::unordered_map<std::string,FastaRecord> *fasta;
-    arma::Col<long long unsigned int> *otu_indices_abundance;
+    std::vector<long long unsigned int> *otu_indices_abundance;
     std::vector<MergeOtu> *merged_otus;
 };
 
@@ -67,6 +65,10 @@ OtuTable read_otu_table_from_file(std::string &otu_count_fp);
 
 // Read FASTA from file
 std::unordered_map<std::string,FastaRecord> read_fasta_from_file(std::string &fasta_fp);
+
+
+// Sort vector and return only indices
+std::vector<long long unsigned int> sort_indices(std::vector<double> &in_vec, std::string direction);
 
 
 // Write merged OTU counts to file
