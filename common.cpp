@@ -149,21 +149,30 @@ std::unordered_map<std::string,FastaRecord> read_fasta_from_file(std::string &fa
     }
 }
 
-// Sort a vector and return a vector of ordered indices
-std::vector<long long unsigned int> sort_indices(std::vector<double> &in_vec, std::string direction) {
-    // Initialise output vector and fill with 0..n where n is input_vector.size() - 1
-    std::vector<long long unsigned int> out_vec(in_vec.size());
-    std::iota(out_vec.begin(), out_vec.end(), 0);
 
-    // Sort indices based on input vector and return
-    if (direction == "increasing") {
-        std::sort(out_vec.begin(), out_vec.end(), [&in_vec](size_t i1, size_t i2) { return in_vec[i1] < in_vec[i2]; });
-    } else if (direction == "decreasing") {
-        std::sort(out_vec.begin(), out_vec.end(), [&in_vec](size_t i1, size_t i2) { return in_vec[i1] > in_vec[i2]; });
-    }
+// Sort distances (MergeOtuDistancePairs) by distance, abundance and then name
+bool compare_merged_otu_distance_pairs(MergeOtuDistancePair &a, MergeOtuDistancePair &b) {
+    // Distance sort
+    if (a.distance < b.distance) return true;
+    if (b.distance < a.distance) return false;
 
-    return out_vec;
+    // If distance equal, abundance sort
+    if (a.merged_otu->abundance > b.merged_otu->abundance) return true;
+    if (b.merged_otu->abundance > a.merged_otu->abundance) return false;
+
+    // If distance and abundance is equaly, name sort
+    if (a.merged_otu->name < b.merged_otu->name) return true;
+    if (b.merged_otu->name < a.merged_otu->name) return false;
+
+    // Should not reach here
+    return false;
 }
+
+
+void sort_merged_otu_distance_pair(std::vector<MergeOtuDistancePair> &merged_otu_distance_pairs) {
+    std::sort(merged_otu_distance_pairs.begin(), merged_otu_distance_pairs.end(), compare_merged_otu_distance_pairs);
+}
+
 
 // Write the merged OTU counts to file
 void write_otu_table_to_file(std::vector<MergeOtu> &merged_otus, OtuData &otu_data, std::string &output_fp) {

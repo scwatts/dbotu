@@ -43,10 +43,18 @@ struct FastaRecord {
 // Struct to contain a merged set of OTUs
 struct MergeOtu {
     long long unsigned int count_index;
+    std::string name;
     std::vector<long long unsigned int> member_count_indices;
     FastaRecord *fasta;
     std::vector<double> otu_counts;
     double abundance;
+};
+
+
+// Struct for distance and MergeOtu
+struct MergeOtuDistancePair {
+    double distance;
+    MergeOtu *merged_otu;
 };
 
 
@@ -67,8 +75,9 @@ OtuTable read_otu_table_from_file(std::string &otu_count_fp);
 std::unordered_map<std::string,FastaRecord> read_fasta_from_file(std::string &fasta_fp);
 
 
-// Sort vector and return only indices
-std::vector<long long unsigned int> sort_indices(std::vector<double> &in_vec, std::string direction);
+// Sort index vector based on value vector
+bool compare_merged_otu_distance_pairs(MergeOtuDistancePair &a, MergeOtuDistancePair &b);
+void sort_merged_otu_distance_pair(std::vector<MergeOtuDistancePair> &merged_otu_distance_pairs);
 
 
 // Write merged OTU counts to file

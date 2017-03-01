@@ -29,8 +29,12 @@ int main(int argc, char **argv) {
     // TODO: check that all OTUs have a matching FASTA record
 
 
-    // Collect indexes in order of most abundant OTU
-    std::vector<long long unsigned int> otu_indices_abundance = sort_indices(otu_table.otu_sum_totals, "decreasing");
+    // Collect indexes in order of most abundant OTU; Initialise output vector and fill with 0..n where n is input_vector.size() - 1
+    std::vector<long long unsigned int> otu_indices_abundance(otu_table.otu_sum_totals.size());
+    std::iota(otu_indices_abundance.begin(), otu_indices_abundance.end(), 0);
+
+    // Perform sort
+    std::sort(otu_indices_abundance.begin(), otu_indices_abundance.end(), [=](size_t i1, size_t i2) { return otu_table.otu_sum_totals[i1] > otu_table.otu_sum_totals[i2]; });
 
 
     // Place a pointer to related data into a struct
@@ -49,8 +53,10 @@ int main(int argc, char **argv) {
             // Create new OTU
             // TODO: refactor to reduce code re-use
             std::string *otu_name = &otu_data.table->otu_names[otu_index];
-            MergeOtu merged_otu = MergeOtu { otu_index, std::vector<long long unsigned int> {otu_index},
-                                             &otu_data.fasta->at(*otu_name), otu_data.table->otu_counts.at(otu_index),
+            MergeOtu merged_otu = MergeOtu { otu_index, otu_data.table->otu_names.at(otu_index),
+                                             std::vector<long long unsigned int> {otu_index},
+                                             &otu_data.fasta->at(*otu_name),
+                                             otu_data.table->otu_counts.at(otu_index),
                                              otu_abundance };
             otu_data.merged_otus->push_back(merged_otu);
         }
@@ -88,9 +94,16 @@ bool merge_otu(long long unsigned int &otu_index, double &otu_min_abundance, dou
         return false;
     }
 
-    // Order candidate merge OTUs by increasing genetic distance
-    std::vector<double> merged_otu_candidate_distances;
-    for (auto merged_otu_candidate : merged_otu_candidates) {
+
+    // Initialise value and index vectors for distance
+    std::vector<MergeOtuDistancePair> merged_otu_distance_pairs;
+
+    // Calculate distances to merge candidates
+#pragma omp parallel for
+    for (long long unsigned int i = 0; i < merged_otu_candidates.size(); ++i) {
+        // Get pointer to merge OTU candidate
+        MergeOtu *merged_otu_candidate = merged_otu_candidates[i];
+
         // Calculate levenshtein distance
         size_t lev_distance = lev_edit_distance(merged_otu_candidate->fasta->sequence.length(),
                                                 merged_otu_candidate->fasta->sequence.c_str(),
@@ -101,25 +114,26 @@ bool merge_otu(long long unsigned int &otu_index, double &otu_min_abundance, dou
         size_t sequence_length_sum = merged_otu_candidate->fasta->sequence.length() + otu_fasta->sequence.length();
         double distance = static_cast<double>(lev_distance) / (0.5 * static_cast<double>(sequence_length_sum));
 
-        // Add distance to vector
-        merged_otu_candidate_distances.push_back(distance);
+        // Add distance and index to vector
+#pragma omp critical
+        merged_otu_distance_pairs.push_back(MergeOtuDistancePair {distance, merged_otu_candidate});
     }
 
     // Get the indices of merged OTUs in order of increasing genetic distance
-    std::vector<long long unsigned int> merged_otu_indices = sort_indices(merged_otu_candidate_distances, "increasing");
+    sort_merged_otu_distance_pair(merged_otu_distance_pairs);
 
 
     // Statistical significance test; iterate through distances from smallest to largest distance
-    for (auto &merged_otu_index : merged_otu_indices) {
+    for (auto &merged_otu_distance_pair : merged_otu_distance_pairs) {
         // Test distance; if we fail this then all following will fail, exit early
-        double *distance = &merged_otu_candidate_distances[merged_otu_index];
+        double *distance = &merged_otu_distance_pair.distance;
         if (*distance > min_distance) {
             break;
         }
 
         // Significance test; if pass return true
         // TODO: use pointer here
-        MergeOtu *merged_otu = merged_otu_candidates[merged_otu_index];
+        MergeOtu *merged_otu = merged_otu_distance_pair.merged_otu;
         std::vector<double> *merged_otu_counts = &merged_otu->otu_counts;
         std::vector<double> *otu_counts = &otu_data.table->otu_counts.at(otu_index);
 

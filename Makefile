@@ -3,10 +3,10 @@ CXX=g++
 CXXFLAGS=-std=c++11 -Wall -Wextra -Wpedantic -Wshadow -Wnon-virtual-dtor \
 	 -Wold-style-cast -Wcast-align -Wunused -Woverloaded-virtual \
 	 -Wconversion -Wsign-conversion -Wmisleading-indentation -Wnonnull \
-	 -g -O3
+	 -g -fopenmp -O3
 
 # Libraries and includes
-LDLIBS=-lblas -llapack -larmadillo -lgsl
+LDLIBS=-lgsl -lgslcblas -lm -lgomp
 # LDFLAGS=
 # INC=
 
