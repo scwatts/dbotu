@@ -141,8 +141,8 @@ std::unordered_map<std::string,FastaRecord> read_fasta_from_file(std::string &fa
         FastaRecord fasta_record { description, sequence };
         fasta_records.emplace(description, fasta_record);
 
-        // If line empty, then it's _likely_ EOF and we're done here
-        if (line.empty()) {
+        // Check if we're EOF
+        if (fasta_fh.eof()) {
             // Finish iteration and return
             return fasta_records;
         }

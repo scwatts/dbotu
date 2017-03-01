@@ -34,7 +34,7 @@ int main(int argc, char **argv) {
     std::iota(otu_indices_abundance.begin(), otu_indices_abundance.end(), 0);
 
     // Perform sort
-    std::sort(otu_indices_abundance.begin(), otu_indices_abundance.end(), [=](size_t i1, size_t i2) { return otu_table.otu_sum_totals[i1] > otu_table.otu_sum_totals[i2]; });
+    std::sort(otu_indices_abundance.begin(), otu_indices_abundance.end(), [&otu_table](size_t i1, size_t i2) { return otu_table.otu_sum_totals[i1] > otu_table.otu_sum_totals[i2]; });
 
 
     // Place a pointer to related data into a struct
