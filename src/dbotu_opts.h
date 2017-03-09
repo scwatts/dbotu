@@ -19,6 +19,9 @@ struct DbotuOptions {
     std::string input_fasta_fp;
     std::string output_otu_counts_fp;
     std::string output_membership_fp;
+
+    // Number of threads
+    unsigned int threads = 1;
 };
 
 

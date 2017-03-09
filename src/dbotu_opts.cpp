@@ -10,7 +10,7 @@ void print_help() {
     fprintf(stderr, "Usage:\n");
     fprintf(stderr, "  dbotu3 [options] --input_otu_table <if> --output_otu_table <of> --output_membership <mf>\n");
     fprintf(stderr, "\n");
-    fprintf(stderr, "  -t <if>, --input_otu_table <if>\n");
+    fprintf(stderr, "  -c <if>, --input_otu_table <if>\n");
     fprintf(stderr, "                Input OTU count table (absolute values in BIOM TSV format)\n");
     fprintf(stderr, "  -f <ff>, --input_fasta <if>\n");
     fprintf(stderr, "                Input FASTA file of representative OTU sequences\n");
@@ -26,6 +26,8 @@ void print_help() {
     fprintf(stderr, "                Minimum fold abundance for merging (default: 10.0)\n");
     fprintf(stderr, "  -p <float>, --pvalue <float>\n");
     fprintf(stderr, "                Maximum p value for merging (default: 0.0005)\n");
+    fprintf(stderr, "  -t <int>, --threads <threads>\n");
+    fprintf(stderr, "                Number of threads to use (default: 1)\n");
     fprintf(stderr, "\n");
     fprintf(stderr, "Other:\n");
     fprintf(stderr, "  -h        --help\n");
@@ -50,13 +52,14 @@ DbotuOptions get_commandline_arguments(int argc, char **argv) {
     // Commandline arguments (for getlongtops)
     struct option long_options[] =
         {
-            {"input_otu_table", required_argument, NULL, 't'},
+            {"input_otu_table", required_argument, NULL, 'c'},
             {"input_fasta", required_argument, NULL, 'f'},
             {"output_otu_table", required_argument, NULL, 'o'},
             {"output_membership", required_argument, NULL, 'm'},
             {"distance", required_argument, NULL, 'd'},
             {"abundance", required_argument, NULL, 'a'},
             {"pvalue", required_argument, NULL, 'p'},
+            {"threads", required_argument, NULL, 't'},
             {"version", no_argument, NULL, 'v'},
             {"help", no_argument, NULL, 'h'},
             {NULL, 0, 0, 0}
@@ -69,7 +72,7 @@ DbotuOptions get_commandline_arguments(int argc, char **argv) {
         int c;
 
         // Parser
-        c = getopt_long(argc, argv, "hvt:f:o:m:d:a:p:", long_options, &option_index);
+        c = getopt_long(argc, argv, "hvc:f:o:m:d:a:p:t:", long_options, &option_index);
 
         // If no more arguments to parse, break
         if (c == -1) {
@@ -78,7 +81,7 @@ DbotuOptions get_commandline_arguments(int argc, char **argv) {
 
         // Process current arguments
         switch (c) {
-            case 't':
+            case 'c':
                 dbotu_options.input_otu_counts_fp = optarg;
                 break;
             case 'f':
@@ -99,6 +102,9 @@ DbotuOptions get_commandline_arguments(int argc, char **argv) {
             case 'p':
                 dbotu_options.max_pvalue = double_from_optarg(optarg);
                 break;
+            case 't':
+                dbotu_options.threads = int_from_optarg(optarg);
+                break;
             case 'v':
                 print_version();
                 exit(0);
@@ -114,7 +120,7 @@ DbotuOptions get_commandline_arguments(int argc, char **argv) {
     // Check if have an attempt at arguments
     if (argc < 9) {
         print_help();
-        fprintf(stderr,"\n%s: error: option -t/--input_otu_table, -f/--input_fasta, -o/--output_otu_table, and -m/--output_membership are required\n", argv[0]);
+        fprintf(stderr,"\n%s: error: option -c/--input_otu_table, -f/--input_fasta, -o/--output_otu_table, and -m/--output_membership are required\n", argv[0]);
         exit(1);
     }
 
@@ -128,7 +134,7 @@ DbotuOptions get_commandline_arguments(int argc, char **argv) {
     // Make sure we have filenames; Input OTU table
     if (dbotu_options.input_otu_counts_fp.empty()) {
         print_help();
-        fprintf(stderr,"\n%s: error: argument -t/--input_otu_table is required\n", argv[0]);
+        fprintf(stderr,"\n%s: error: argument -c/--input_otu_table is required\n", argv[0]);
         exit(1);
     }
 
@@ -178,6 +184,26 @@ DbotuOptions get_commandline_arguments(int argc, char **argv) {
     if (dbotu_options.max_pvalue < 0.0f || dbotu_options.max_pvalue > 1.0f) {
         print_help();
         fprintf(stderr,"\n%s: error: -p/--pvalue must be between 0.0 and 1.0\n", argv[0]);
+        exit(1);
+    }
+
+
+    // Check if have a reasonable number of threads
+    if (dbotu_options.threads < 1) {
+        print_help();
+        fprintf(stderr,"\n%s: error: must specify at least 1 thread\n", argv[0]);
+        exit(1);
+    }
+
+    // Check we don't attempt to use more threads than we have
+    unsigned int available_threads = std::thread::hardware_concurrency();
+    if (available_threads > 1 && dbotu_options.threads > available_threads) {
+        print_help();
+        fprintf(stderr, "\n%s: error: only %d threads are available\n", argv[0], available_threads);
+        exit(1);
+    } else if (dbotu_options.threads > 64) {
+        print_help();
+        fprintf(stderr, "\n%s: error: current hardcode limit of 64 threads\n", argv[0]);
         exit(1);
     }
 

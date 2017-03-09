@@ -7,6 +7,10 @@ int main(int argc, char **argv) {
     DbotuOptions dbotu_options = get_commandline_arguments(argc, argv);
 
 
+    // Set number of threads to use
+    omp_set_num_threads(dbotu_options.threads);
+
+
     // Load OTU count table from file and sum OTU counts
     OtuTable otu_table = read_otu_table_from_file(dbotu_options.input_otu_counts_fp);
     otu_table.otu_sum_totals.reserve(otu_table.otu_counts.size());

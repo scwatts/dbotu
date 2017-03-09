@@ -18,6 +18,23 @@ double double_from_optarg(const char *local_optarg) {
 }
 
 
+// Convert optarg type to double
+int int_from_optarg(const char *optarg) {
+    // Check at most the first 8 characters are numerical
+    std::string optstring(optarg);
+    std::string string_int = optstring.substr(0, 8);
+
+    for (std::string::iterator it = string_int.begin(); it != string_int.end(); ++it) {
+        if (!isdigit(*it)) {
+            fprintf(stderr, "This doesn't look like a usable integer: %s\n", optarg);
+            exit(1);
+        }
+    }
+
+    return std::atoi(string_int.c_str());
+}
+
+
 // Load an OTU table from file
 OtuTable read_otu_table_from_file(std::string &otu_count_fp) {
     //Return variable

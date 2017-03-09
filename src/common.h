@@ -9,11 +9,13 @@
 #include <random>
 #include <sstream>
 #include <string>
+#include <thread>
 #include <unordered_map>
 #include <vector>
 
 
 #include <gsl/gsl_cdf.h>
+#include "omp.h"
 
 
 // Struct to hold OTU counts and associated information
@@ -90,6 +92,10 @@ void write_merged_otu_members_to_file(std::vector<MergeOtu> &merged_otus, OtuDat
 
 // Function to convert optarg into double
 double double_from_optarg(const char *optarg);
+
+
+// Convert character to integer
+int int_from_optarg(const char *optarg);
 
 
 #endif
