@@ -3,7 +3,7 @@
 
 void print_help() {
     fprintf(stderr, "Program: dbOTU3 (c++ implementation)\n");
-    fprintf(stderr, "Version 0.1a\n");
+    fprintf(stderr, "Version %s\n", VERSION);
     fprintf(stderr, "C++ Implementation: Stephen Watts (s.watts2@student.unimelb.edu.au)\n");
     fprintf(stderr, "Original Author: Scott Olesen (swo@alum.mit.edu)\n");
     fprintf(stderr, "\n");
@@ -39,7 +39,7 @@ void print_help() {
 
 void print_version() {
     fprintf(stderr, "Program: dbOTU3 (c++ implementation)\n");
-    fprintf(stderr, "Version 0.1a\n");
+    fprintf(stderr, "Version %s\n", VERSION);
     fprintf(stderr, "C++ Implementation: Stephen Watts (s.watts2@student.unimelb.edu.au)\n");
     fprintf(stderr, "Original dbOTU3 Author: Scott Olesen (swo@alum.mit.edu)\n");
 }

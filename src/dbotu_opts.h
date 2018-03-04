@@ -6,6 +6,7 @@
 
 
 #include "common.h"
+#include "version.h"
 
 
 struct DbotuOptions {
