@@ -2,7 +2,7 @@
 [![Build Status](https://travis-ci.org/scwatts/otudistclust.svg?branch=master)](https://travis-ci.org/scwatts/otudistclust)
 [![License](https://img.shields.io/badge/License-GPLv3-blue.svg)](https://www.gnu.org/licenses/gpl-3.0.en.html)
 
-Eefficient and parallelised implementation of [dbOTU3](https://github.com/swo/dbotu3).
+Efficient and parallelised implementation of [dbOTU3](https://github.com/swo/dbotu3).
 
 
 ## Table of contents
