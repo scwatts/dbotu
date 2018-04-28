@@ -2,13 +2,10 @@
 
 
 void print_help() {
-    fprintf(stderr, "Program: dbOTU3 (c++ implementation)\n");
-    fprintf(stderr, "Version %s\n", VERSION);
-    fprintf(stderr, "C++ Implementation: Stephen Watts (s.watts2@student.unimelb.edu.au)\n");
-    fprintf(stderr, "Original Author: Scott Olesen (swo@alum.mit.edu)\n");
+    print_version();
     fprintf(stderr, "\n");
     fprintf(stderr, "Usage:\n");
-    fprintf(stderr, "  dbotu3 [options] --input_otu_table <if> --output_otu_table <of> --output_membership <mf>\n");
+    fprintf(stderr, "  dbotuc [options] --input_otu_table <if> --output_otu_table <of> --output_membership <mf>\n");
     fprintf(stderr, "\n");
     fprintf(stderr, "  -c <if>, --input_otu_table <if>\n");
     fprintf(stderr, "                Input OTU count table (absolute values in BIOM TSV format)\n");
@@ -21,7 +18,7 @@ void print_help() {
     fprintf(stderr, "\n");
     fprintf(stderr, "Options:\n");
     fprintf(stderr, "  -d <float>, --distance <float>\n");
-    fprintf(stderr, "                Minimum distance for merging (default 0.1)\n");
+    fprintf(stderr, "                Minimum distance for merging (default: 0.1)\n");
     fprintf(stderr, "  -a <float>, --abundance <float>\n");
     fprintf(stderr, "                Minimum fold abundance for merging (default: 10.0)\n");
     fprintf(stderr, "  -p <float>, --pvalue <float>\n");
@@ -38,7 +35,7 @@ void print_help() {
 
 
 void print_version() {
-    fprintf(stderr, "Program: dbOTU3 (c++ implementation)\n");
+    fprintf(stderr, "Program: dbOTUc (c++ implementation)\n");
     fprintf(stderr, "Version %s\n", VERSION);
     fprintf(stderr, "C++ Implementation: Stephen Watts (s.watts2@student.unimelb.edu.au)\n");
     fprintf(stderr, "Original dbOTU3 Author: Scott Olesen (swo@alum.mit.edu)\n");

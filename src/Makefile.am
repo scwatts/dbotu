@@ -9,5 +9,5 @@ endif
 
 
 # Declaring files
-bin_PROGRAMS = dbotu
-dbotu_SOURCES = dbotu.cpp dbotu_opts.cpp common.cpp
+bin_PROGRAMS = dbotuc
+dbotuc_SOURCES = dbotu.cpp dbotu_opts.cpp common.cpp

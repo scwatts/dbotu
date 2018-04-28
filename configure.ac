@@ -1,5 +1,5 @@
 # Initialisation
-AC_INIT([dbotu], [0.0.1], [step.wat@gmail.com])
+AC_INIT([dbotuc], [0.0.1], [step.wat@gmail.com])
 AM_INIT_AUTOMAKE([foreign -Wall -Werror])
 
 
